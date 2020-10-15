@@ -1,9 +1,13 @@
 import logging
 import logging.handlers
+# import os
 '''
 日志模块
 '''
-LOG_FILENAME = 'yiban.log'
+# LOG_PATH = (os.path.dirname(os.getcwd()) + '/Logs/')
+# LOG_PATH = ('/var/log/')
+LOG_PATH=""
+LOG_FILENAME = LOG_PATH+'yiban.log'
 logger = logging.getLogger()
 
 def set_logger():

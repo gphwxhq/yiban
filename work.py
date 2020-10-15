@@ -83,7 +83,7 @@ class yiban:
 
     def start(self):
         if not self.login():
-            logger.info('登录失败')
+            logger.error('登录失败')
             self.send('登录失败')
             exit()
         self.auth()
@@ -94,7 +94,7 @@ class yiban:
         url='https://api.uyiban.com/officeTask/client/index/uncompletedList?StartTime={}%2000%3A00&EndTime={}%2023%3A59&CSRF={}'.format(starttime,endtime,self.csrf)
         a = json.loads(self.sess.get(url,headers=self.headers,cookies=self.cookie).text)#获取任务列表
         if a['code'] != 0:
-            logger.info(a['msg'])
+            logger.error(a['msg'])
             self.send(a['msg'])
             exit()
         data = a['data']
@@ -134,7 +134,7 @@ class yiban:
             elif title[-4:-2] == "午检":
                 c = self.sess.post(url2, headers=self.headers,cookies=self.cookie, data=noon_data).text
             else:
-                logger.info(title+'晨检午检判断出错')
+                logger.error(title+'晨检午检判断出错')
                 self.send(title+'晨检午检判断出错')
                 continue
             c = json.loads(c)
@@ -143,7 +143,7 @@ class yiban:
                 logger.info(title + '打卡成功')
             else:
                 finish += title + '打卡失败\n'
-                logger.info(title + '打卡失败')
+                logger.error(title + '打卡失败')
             time.sleep(5)
         # logger.info(finish)
         logger.info("运行结束")
