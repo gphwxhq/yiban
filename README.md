@@ -2,6 +2,7 @@
 内大易班早中打卡
 
 + 批量完成打卡
++ 随机生成体温
 + server酱推送结果
 
 感谢looyeagee大佬提供思路，参考项目：https://github.com/looyeagee/yiban_auto_submit
