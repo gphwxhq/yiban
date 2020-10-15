@@ -1,12 +1,12 @@
 # coding=utf-8
-import re
+import re,random
 import requests, json, time
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_v1_5
 import base64
 from urllib import parse
 from requests.exceptions import SSLError
-
+from logger import logger
 
 class yiban:
     def send(self, text,detail=""):
@@ -66,6 +66,7 @@ class yiban:
         if data is not None and str(data["response"]) == "100":
             self.access_token = data["data"]["access_token"]
             self.name = data["data"]["user"]["name"]
+            logger.info("登录成功，用户：%s"%self.name)
             return True
         else:
             return False
@@ -76,13 +77,13 @@ class yiban:
         location = self.sess.get('http://f.yiban.cn/iapp/index?act=iapp7463&v=%s' % self.access_token, headers=HEADERS,
                                  allow_redirects=False).headers["Location"]
         verifyRequest = re.findall(r"verify_request=(.*?)&", location)[0]
-        # print(verifyRequest)
+        # logger.info(verifyRequest)
         self.sess.get("https://api.uyiban.com/base/c/auth/yiban?verifyRequest=%s&CSRF=%s" % (verifyRequest, self.csrf),
                       cookies=self.cookie, headers=self.headers)
 
     def start(self):
         if not self.login():
-            print('登录失败')
+            logger.info('登录失败')
             self.send('登录失败')
             exit()
         self.auth()
@@ -91,15 +92,14 @@ class yiban:
         # starttime 形式='2020-10-01'
         endtime = time.strftime("%Y-%m-%d", time.localtime(cur+86400))#往后推一天，解决服务器时区问题
         url='https://api.uyiban.com/officeTask/client/index/uncompletedList?StartTime={}%2000%3A00&EndTime={}%2023%3A59&CSRF={}'.format(starttime,endtime,self.csrf)
-        a = self.sess.get(url,headers=self.headers,cookies=self.cookie).text#获取任务列表
-        a = json.loads(a)
+        a = json.loads(self.sess.get(url,headers=self.headers,cookies=self.cookie).text)#获取任务列表
         if a['code'] != 0:
-            print(a['msg'])
+            logger.info(a['msg'])
             self.send(a['msg'])
             exit()
         data = a['data']
         if len(data) == 0:
-            print('没有任务')
+            logger.info('没有任务')
             self.send('没有任务')
             exit()
         taskidlist=[]
@@ -109,7 +109,7 @@ class yiban:
                 taskidlist.append(item['TaskId'])
                 titlelist.append(item['Title'])
         if len(taskidlist)==0:
-            print('有任务但未到执行时间')
+            logger.info('有任务但未到执行时间')
             self.send('有任务但未到执行时间')
             exit()
         finish='结果：\n'
@@ -119,12 +119,13 @@ class yiban:
             url = 'https://api.uyiban.com/officeTask/client/index/detail?TaskId=%s&CSRF=%s'%(taskid,self.csrf)
             b = json.loads(self.sess.get(url, headers=self.headers,cookies=self.cookie).text)#获取参数
             #表单数据：体温，本人是否有可疑症状，同住人是否有可疑症状
+            temper = round(random.uniform(36, 36.6), 1) #生成区间位于36-36.6带有一位小数的体温
             morning_data = {
-                'data': '{"ed9ff15f7155ed96682309ea8f865c94":"36.6°","adbd34269e63dab3ceda0a9debb57733":"无以上症状","8525b81624577db90dd509b4301d1d21":"无以上症状"}',
+                'data': '{"ed9ff15f7155ed96682309ea8f865c94":"%s°","adbd34269e63dab3ceda0a9debb57733":"无以上症状","8525b81624577db90dd509b4301d1d21":"无以上症状"}'%temper,
                 'extend': '{"TaskId":"%s","title":"任务信息","content":[{"label":"任务名称","value":"%s"},{"label":"发布机构","value":"学生工作处"}]}'%(taskid,title)
             }
             noon_data = {
-                'data': '{"ed9ff15f7155ed96682309ea8f865c94":"36.6°","adbd34269e63dab3ceda0a9debb57733":"无以上症状","9a9c2732741377699aa2158cb58e54f2":"无以上症状"}',
+                'data': '{"ed9ff15f7155ed96682309ea8f865c94":"%s°","adbd34269e63dab3ceda0a9debb57733":"无以上症状","9a9c2732741377699aa2158cb58e54f2":"无以上症状"}'%temper,
                 'extend': '{"TaskId":"%s","title":"任务信息","content":[{"label":"任务名称","value":"%s"},{"label":"发布机构","value":"学生工作处"}]}'%(taskid,title)
             }
             url2 = 'https://api.uyiban.com/workFlow/c/my/apply/%s?CSRF=%s'%(b['data']['WFId'],self.csrf)
@@ -133,7 +134,7 @@ class yiban:
             elif title[-4:-2] == "午检":
                 c = self.sess.post(url2, headers=self.headers,cookies=self.cookie, data=noon_data).text
             else:
-                print(title+'晨检午检判断出错')
+                logger.info(title+'晨检午检判断出错')
                 self.send(title+'晨检午检判断出错')
                 continue
             c = json.loads(c)
@@ -141,9 +142,10 @@ class yiban:
                 finish+=title+'打卡成功\n'
             else:
                 finish += title + '打卡失败\n'
-            print(title+'打卡成功')
+            logger.info(title+'打卡成功')
             time.sleep(5)
-        print(finish)
+        # logger.info(finish)
+        logger.info("运行结束")
         self.send('%s打卡结果'%self.name,finish)
 
     def __init__(self,account,pswd,server_url=""):
@@ -151,7 +153,7 @@ class yiban:
         self.account = account
         self.passwd = pswd
         self.csrf = 'a6c72b556f582b4cc1a557cf80ca7cc7'
-        self.cookie={'csrf_token':'a6c72b556f582b4cc1a557cf80ca7cc7'}
+        self.cookie={'csrf_token':self.csrf}
         self.headers = {
             'origin': 'https://app.uyiban.com',
             'referer': 'https://app.uyiban.com/',
