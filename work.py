@@ -140,9 +140,10 @@ class yiban:
             c = json.loads(c)
             if c['data'] != '':
                 finish+=title+'打卡成功\n'
+                logger.info(title + '打卡成功')
             else:
                 finish += title + '打卡失败\n'
-            logger.info(title+'打卡成功')
+                logger.info(title + '打卡失败')
             time.sleep(5)
         # logger.info(finish)
         logger.info("运行结束")
