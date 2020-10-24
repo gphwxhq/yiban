@@ -13,4 +13,5 @@
 3、运行start.py
 
 # 服务器部署：
-参考crontab命令
+参考crontab命令  
+日志存放位置可在logger.py中的LOG_PATH修改
