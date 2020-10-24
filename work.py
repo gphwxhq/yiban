@@ -17,7 +17,9 @@ class yiban:
             'text': text,
             'desp': detail
         }
-        requests.post(self.server_url, data=data)
+        res=json.loads(requests.post(self.server_url, data=data).text)
+        if(res['errno']!=0):
+            logger.error("server酱报错：%s"%res['errmsg'])
 
     def encrypt_passwd(self, pwd):
         #密码加密
@@ -81,73 +83,100 @@ class yiban:
         self.sess.get("https://api.uyiban.com/base/c/auth/yiban?verifyRequest=%s&CSRF=%s" % (verifyRequest, self.csrf),
                       cookies=self.cookie, headers=self.headers)
 
+    def get_tasklist(self,mode):#mode=1为初检，mode=2为复检
+        cur = time.time()
+        starttime = time.strftime("%Y-%m-%d", time.localtime(cur - 604800))  # 往前推7天
+        # starttime 形式='2020-10-01'
+        endtime = time.strftime("%Y-%m-%d", time.localtime(cur + 86400))  # 往后推一天，解决服务器时区问题
+        url = 'https://api.uyiban.com/officeTask/client/index/uncompletedList?StartTime={}%2000%3A00&EndTime={}%2023%3A59&CSRF={}'.format(
+            starttime, endtime, self.csrf)
+        a = json.loads(self.sess.get(url, headers=self.headers, cookies=self.cookie).text)  # 获取任务列表
+        if a['code'] != 0:
+            logger.error(a['msg'])
+            self.send(a['msg'])
+            logger.info("运行结束")
+            exit()
+        data = a['data']
+        if len(data) == 0:
+            if mode==1:
+                logger.info('没有任务')
+                self.send('没有任务')
+                logger.info("运行结束")
+                exit()
+            else:
+                logger.info('复检结束，无遗漏任务')
+                return
+        self.taskidlist = []
+        self.titlelist = []
+        for item in data:  # 筛选有效任务
+            if cur > int(item['StartTime']):
+                self.taskidlist.append(item['TaskId'])
+                self.titlelist.append(item['Title'])
+        if len(self.taskidlist)==0:
+            if mode==1:
+                logger.info('有任务但未到执行时间')
+                self.send('有任务但未到执行时间')
+                logger.info("运行结束")
+                exit()
+            else:
+                logger.info('复检结束，无遗漏任务')
+                return
+        elif len(self.taskidlist)!=0 and mode==2:
+            logger.info("检测到遗漏任务,重新执行...")
+            self.finish+="检测到遗漏任务,重新执行...\n"
+            self.post_data()
+
+
+    def post_data(self):
+        self.finish+= '结果：\n'
+        for iter in range(len(self.taskidlist)):
+            taskid = self.taskidlist[iter]
+            title = self.titlelist[iter]
+            url = 'https://api.uyiban.com/officeTask/client/index/detail?TaskId=%s&CSRF=%s' % (taskid, self.csrf)
+            b = json.loads(self.sess.get(url, headers=self.headers, cookies=self.cookie).text)  # 获取参数
+            # 表单数据：体温，本人是否有可疑症状，同住人是否有可疑症状
+            temper = round(random.uniform(36, 36.6), 1)  # 生成区间位于36-36.6带有一位小数的体温
+            morning_data = {
+                'data': '{"ed9ff15f7155ed96682309ea8f865c94":"%s°","adbd34269e63dab3ceda0a9debb57733":"无以上症状","8525b81624577db90dd509b4301d1d21":"无以上症状"}' % temper,
+                'extend': '{"TaskId":"%s","title":"任务信息","content":[{"label":"任务名称","value":"%s"},{"label":"发布机构","value":"学生工作处"}]}' % (
+                taskid, title)
+            }
+            noon_data = {
+                'data': '{"ed9ff15f7155ed96682309ea8f865c94":"%s°","adbd34269e63dab3ceda0a9debb57733":"无以上症状","9a9c2732741377699aa2158cb58e54f2":"无以上症状"}' % temper,
+                'extend': '{"TaskId":"%s","title":"任务信息","content":[{"label":"任务名称","value":"%s"},{"label":"发布机构","value":"学生工作处"}]}' % (
+                taskid, title)
+            }
+            url2 = 'https://api.uyiban.com/workFlow/c/my/apply/%s?CSRF=%s' % (b['data']['WFId'], self.csrf)
+            if title[-4:-2] == "晨检":
+                c = self.sess.post(url2, headers=self.headers, cookies=self.cookie, data=morning_data).text
+            elif title[-4:-2] == "午检":
+                c = self.sess.post(url2, headers=self.headers, cookies=self.cookie, data=noon_data).text
+            else:
+                logger.error(title + '晨检午检判断出错')
+                self.send(title + '晨检午检判断出错')
+                continue
+            c = json.loads(c)
+            if c['data'] != '':
+                self.finish += '%s打卡成功,' % title
+                logger.info('%s打卡成功' % title)
+            else:
+                self.finish += '%s打卡失败,'% title
+                logger.error('%s打卡失败' % title)
+            time.sleep(5)
+
     def start(self):
         if not self.login():
             logger.error('登录失败')
             self.send('登录失败')
+            logger.info("运行结束")
             exit()
         self.auth()
-        cur=time.time()
-        starttime=time.strftime("%Y-%m-%d", time.localtime(cur-604800))#往前推7天
-        # starttime 形式='2020-10-01'
-        endtime = time.strftime("%Y-%m-%d", time.localtime(cur+86400))#往后推一天，解决服务器时区问题
-        url='https://api.uyiban.com/officeTask/client/index/uncompletedList?StartTime={}%2000%3A00&EndTime={}%2023%3A59&CSRF={}'.format(starttime,endtime,self.csrf)
-        a = json.loads(self.sess.get(url,headers=self.headers,cookies=self.cookie).text)#获取任务列表
-        if a['code'] != 0:
-            logger.error(a['msg'])
-            self.send(a['msg'])
-            exit()
-        data = a['data']
-        if len(data) == 0:
-            logger.info('没有任务')
-            self.send('没有任务')
-            exit()
-        taskidlist=[]
-        titlelist=[]
-        for item in data:#筛选有效任务
-            if cur>int(item['StartTime']):
-                taskidlist.append(item['TaskId'])
-                titlelist.append(item['Title'])
-        if len(taskidlist)==0:
-            logger.info('有任务但未到执行时间')
-            self.send('有任务但未到执行时间')
-            exit()
-        finish='结果：\n'
-        for iter in range(len(taskidlist)):
-            taskid = taskidlist[iter]
-            title = titlelist[iter]
-            url = 'https://api.uyiban.com/officeTask/client/index/detail?TaskId=%s&CSRF=%s'%(taskid,self.csrf)
-            b = json.loads(self.sess.get(url, headers=self.headers,cookies=self.cookie).text)#获取参数
-            #表单数据：体温，本人是否有可疑症状，同住人是否有可疑症状
-            temper = round(random.uniform(36, 36.6), 1) #生成区间位于36-36.6带有一位小数的体温
-            morning_data = {
-                'data': '{"ed9ff15f7155ed96682309ea8f865c94":"%s°","adbd34269e63dab3ceda0a9debb57733":"无以上症状","8525b81624577db90dd509b4301d1d21":"无以上症状"}'%temper,
-                'extend': '{"TaskId":"%s","title":"任务信息","content":[{"label":"任务名称","value":"%s"},{"label":"发布机构","value":"学生工作处"}]}'%(taskid,title)
-            }
-            noon_data = {
-                'data': '{"ed9ff15f7155ed96682309ea8f865c94":"%s°","adbd34269e63dab3ceda0a9debb57733":"无以上症状","9a9c2732741377699aa2158cb58e54f2":"无以上症状"}'%temper,
-                'extend': '{"TaskId":"%s","title":"任务信息","content":[{"label":"任务名称","value":"%s"},{"label":"发布机构","value":"学生工作处"}]}'%(taskid,title)
-            }
-            url2 = 'https://api.uyiban.com/workFlow/c/my/apply/%s?CSRF=%s'%(b['data']['WFId'],self.csrf)
-            if title[-4:-2] == "晨检":
-                c = self.sess.post(url2, headers=self.headers,cookies=self.cookie, data=morning_data).text
-            elif title[-4:-2] == "午检":
-                c = self.sess.post(url2, headers=self.headers,cookies=self.cookie, data=noon_data).text
-            else:
-                logger.error(title+'晨检午检判断出错')
-                self.send(title+'晨检午检判断出错')
-                continue
-            c = json.loads(c)
-            if c['data'] != '':
-                finish+=title+'打卡成功\n'
-                logger.info(title + '打卡成功')
-            else:
-                finish += title + '打卡失败\n'
-                logger.error(title + '打卡失败')
-            time.sleep(5)
-        # logger.info(finish)
+        self.get_tasklist(1)
+        self.post_data()
+        self.get_tasklist(2)
+        self.send('%s打卡结果'%self.name,self.finish)
         logger.info("运行结束")
-        self.send('%s打卡结果'%self.name,finish)
+
 
     def __init__(self,account,pswd,server_url=""):
         self.sess = requests.session()
@@ -162,3 +191,4 @@ class yiban:
             'user-agent': 'yiban',
         }
         self.server_url=server_url
+        self.finish=""
