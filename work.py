@@ -173,6 +173,7 @@ class yiban:
         self.auth()
         self.get_tasklist(1)
         self.post_data()
+        time.sleep(5)
         self.get_tasklist(2)
         self.send('%s打卡结果'%self.name,self.finish)
         logger.info("运行结束")
