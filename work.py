@@ -179,6 +179,44 @@ class yiban:
         logger.info("运行结束")
 
 
+    def start_night_attendance(self):
+        if not self.login():
+            logger.error('登录失败')
+            self.send('登录失败')
+            logger.info("运行结束")
+            exit()
+        self.auth()
+        check_url='https://api.uyiban.com/nightAttendance/student/index/signPosition?CSRF=%s'%self.csrf
+        post_url = 'https://api.uyiban.com/nightAttendance/student/index/signIn?CSRF=%s' % self.csrf
+        for i in range(self.max_try_time):
+            res=json.loads(self.sess.get(check_url, headers=self.headers, cookies=self.cookie).text)
+            if res['data']['State']==3:
+                if i==0:
+                    self.send('之前已完成晚点签到')
+                    logger.info("之前已完成晚点签到")
+                else:
+                    self.send('晚检签到成功')
+                    logger.info("晚检签到成功")
+                logger.info("运行结束")
+                exit()
+            add1 = round(random.uniform(111.6987, 111.7011), 4)
+            add2=round(random.uniform(40.8140, 40.8159), 4)
+            data={
+                'Code':'',
+                'SignInfo':'{"Reason":"","AttachmentFileName":"","LngLat":"%s,%s","Address":"内蒙古自治区 呼和浩特市 赛罕区 金宇巷 109号 靠近内蒙古大学(东校区) "}'% (add1, add2),
+                'OutState':1
+            }
+            res = json.loads(self.sess.post(post_url, headers=self.headers, cookies=self.cookie,data=data).text)
+            if res['code']!=0:
+                logger.error('晚点签到失败，错误：%s'%res['msg'])
+                self.send('晚点签到失败，错误：%s'%res['msg'])
+                logger.info("运行结束")
+                exit()
+            time.sleep(5)
+        logger.error('晚点签到:已尝试至最大次数，可能签到失败')
+        self.send('晚点签到:已尝试至最大次数，可能签到失败')
+        logger.info("运行结束")
+
     def __init__(self,account,pswd,server_url=""):
         self.sess = requests.session()
         self.account = account
