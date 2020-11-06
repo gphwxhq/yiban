@@ -190,13 +190,17 @@ class yiban:
         post_url = 'https://api.uyiban.com/nightAttendance/student/index/signIn?CSRF=%s' % self.csrf
         for i in range(self.max_try_time):
             res=json.loads(self.sess.get(check_url, headers=self.headers, cookies=self.cookie).text)
-            if res['data']['State']==3:
-                if i==0:
-                    self.send('%s晚检打卡结果'%self.name,'之前已完成晚点签到')
-                    logger.info("之前已完成晚点签到")
+            if res['data']['State']!=0:
+                if res['data']['State']==3:
+                    if i==0:
+                        self.send('%s晚检打卡结果'%self.name,'之前已完成晚点签到')
+                        logger.info("之前已完成晚点签到")
+                    else:
+                        self.send('%s晚检打卡结果'%self.name,'晚检签到成功')
+                        logger.info("晚检签到成功")
                 else:
-                    self.send('%s晚检打卡结果'%self.name,'晚检签到成功')
-                    logger.info("晚检签到成功")
+                    self.send('晚点签到:%s'%res['data']['Msg'])
+                    logger.info('晚点签到:%s'%res['data']['Msg'])
                 logger.info("运行结束")
                 exit()
             add1 = round(random.uniform(111.6987, 111.7011), 4)
