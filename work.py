@@ -83,48 +83,51 @@ class yiban:
         self.sess.get("https://api.uyiban.com/base/c/auth/yiban?verifyRequest=%s&CSRF=%s" % (verifyRequest, self.csrf),
                       cookies=self.cookie, headers=self.headers)
 
-    def get_tasklist(self,mode):#mode=1为初检，mode=2为复检
+    def get_tasklist(self):
         cur = time.time()
         starttime = time.strftime("%Y-%m-%d", time.localtime(cur - 604800))  # 往前推7天
         # starttime 形式='2020-10-01'
         endtime = time.strftime("%Y-%m-%d", time.localtime(cur + 86400))  # 往后推一天，解决服务器时区问题
         url = 'https://api.uyiban.com/officeTask/client/index/uncompletedList?StartTime={}%2000%3A00&EndTime={}%2023%3A59&CSRF={}'.format(
             starttime, endtime, self.csrf)
-        a = json.loads(self.sess.get(url, headers=self.headers, cookies=self.cookie).text)  # 获取任务列表
-        if a['code'] != 0:
-            logger.error(a['msg'])
-            self.send(a['msg'])
-            logger.info("运行结束")
-            exit()
-        data = a['data']
-        if len(data) == 0:
-            if mode==1:
-                logger.info('没有任务')
-                self.send('没有任务')
+        for i in range(self.max_try_time):
+            a = json.loads(self.sess.get(url, headers=self.headers, cookies=self.cookie).text)  # 获取任务列表
+            if a['code'] != 0:
+                logger.error(a['msg'])
+                self.send(a['msg'])
                 logger.info("运行结束")
                 exit()
-            else:
-                logger.info('复检结束，无遗漏任务')
-                return
-        self.taskidlist = []
-        self.titlelist = []
-        for item in data:  # 筛选有效任务
-            if cur > int(item['StartTime']):
-                self.taskidlist.append(item['TaskId'])
-                self.titlelist.append(item['Title'])
-        if len(self.taskidlist)==0:
-            if mode==1:
-                logger.info('有任务但未到执行时间')
-                self.send('有任务但未到执行时间')
-                logger.info("运行结束")
-                exit()
-            else:
-                logger.info('复检结束，无遗漏任务')
-                return
-        elif len(self.taskidlist)!=0 and mode==2:
-            logger.info("检测到遗漏任务,重新执行...")
-            self.finish+="检测到遗漏任务,重新执行...\n"
+            data = a['data']
+            if len(data) == 0:
+                if i==0:
+                    logger.info('没有任务')
+                    self.send('没有任务')
+                    logger.info("运行结束")
+                    exit()
+                else:
+                    logger.info('复检结束，无遗漏任务')
+                    return
+            self.taskidlist = []
+            self.titlelist = []
+            for item in data:  # 筛选有效任务
+                if cur > int(item['StartTime']):
+                    self.taskidlist.append(item['TaskId'])
+                    self.titlelist.append(item['Title'])
+            if len(self.taskidlist)==0:
+                if i==0:
+                    logger.info('有任务但未到执行时间')
+                    self.send('有任务但未到执行时间')
+                    logger.info("运行结束")
+                    exit()
+                else:
+                    logger.info('复检结束，无遗漏任务')
+                    return
+            if(i>0):
+                logger.info("检测到遗漏任务，重新执行")
+                self.finish += "检测到遗漏任务，重新执行\n"
             self.post_data()
+        logger.error("已尝试至最大次数，可能打卡失败")
+        self.finish += "已尝试至最大次数，可能打卡失败\n"
 
 
     def post_data(self):
@@ -171,10 +174,7 @@ class yiban:
             logger.info("运行结束")
             exit()
         self.auth()
-        self.get_tasklist(1)
-        self.post_data()
-        time.sleep(5)
-        self.get_tasklist(2)
+        self.get_tasklist()
         self.send('%s打卡结果'%self.name,self.finish)
         logger.info("运行结束")
 
@@ -191,5 +191,6 @@ class yiban:
             'Host': 'api.uyiban.com',
             'user-agent': 'yiban',
         }
+        self.max_try_time=3
         self.server_url=server_url
         self.finish=""
