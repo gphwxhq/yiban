@@ -192,10 +192,10 @@ class yiban:
             res=json.loads(self.sess.get(check_url, headers=self.headers, cookies=self.cookie).text)
             if res['data']['State']==3:
                 if i==0:
-                    self.send('之前已完成晚点签到')
+                    self.send('%s晚检打卡结果'%self.name,'之前已完成晚点签到')
                     logger.info("之前已完成晚点签到")
                 else:
-                    self.send('晚检签到成功')
+                    self.send('%s晚检打卡结果'%self.name,'晚检签到成功')
                     logger.info("晚检签到成功")
                 logger.info("运行结束")
                 exit()
@@ -209,12 +209,12 @@ class yiban:
             res = json.loads(self.sess.post(post_url, headers=self.headers, cookies=self.cookie,data=data).text)
             if res['code']!=0:
                 logger.error('晚点签到失败，错误：%s'%res['msg'])
-                self.send('晚点签到失败，错误：%s'%res['msg'])
+                self.send('%s晚检打卡结果'%self.name,'晚点签到失败，错误：%s'%res['msg'])
                 logger.info("运行结束")
                 exit()
             time.sleep(5)
         logger.error('晚点签到:已尝试至最大次数，可能签到失败')
-        self.send('晚点签到:已尝试至最大次数，可能签到失败')
+        self.send('%s晚检打卡结果'%self.name,'晚点签到:已尝试至最大次数，可能签到失败')
         logger.info("运行结束")
 
     def __init__(self,account,pswd,server_url=""):
