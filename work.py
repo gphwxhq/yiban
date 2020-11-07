@@ -1,5 +1,6 @@
 # coding=utf-8
 import re,random
+from json.decoder import JSONDecodeError
 import requests, json, time
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_v1_5
@@ -91,7 +92,12 @@ class yiban:
         url = 'https://api.uyiban.com/officeTask/client/index/uncompletedList?StartTime={}%2000%3A00&EndTime={}%2023%3A59&CSRF={}'.format(
             starttime, endtime, self.csrf)
         for i in range(self.max_try_time):
-            a = json.loads(self.sess.get(url, headers=self.headers, cookies=self.cookie).text)  # 获取任务列表
+            try:
+                a = json.loads(self.sess.get(url, headers=self.headers, cookies=self.cookie).text)  # 获取任务列表
+            except JSONDecodeError:
+                logger.error('任务列表解析失败，即将重试..')
+                time.sleep(3)
+                a = json.loads(self.sess.get(url, headers=self.headers, cookies=self.cookie).text)
             if a['code'] != 0:
                 logger.error(a['msg'])
                 self.send(a['msg'])
