@@ -100,14 +100,14 @@ class yiban:
                 a = json.loads(self.sess.get(url, headers=self.headers, cookies=self.cookie).text)
             if a['code'] != 0:
                 logger.error(a['msg'])
-                self.send(a['msg'])
+                self.send("%s打卡失败"%self.name,a['msg'])
                 logger.info("运行结束")
                 exit()
             data = a['data']
             if len(data) == 0:
                 if i==0:
                     logger.info('没有任务')
-                    self.send('没有任务')
+                    self.send('%s打卡失败'%self.name,"没有任务")
                     logger.info("运行结束")
                     exit()
                 else:
@@ -122,7 +122,7 @@ class yiban:
             if len(self.taskidlist)==0:
                 if i==0:
                     logger.info('有任务但未到执行时间')
-                    self.send('有任务但未到执行时间')
+                    self.send('%s打卡失败'%self.name,'有任务但未到执行时间')
                     logger.info("运行结束")
                     exit()
                 else:
@@ -130,14 +130,14 @@ class yiban:
                     return
             if(i>0):
                 logger.info("检测到遗漏任务，重新执行")
-                self.finish += "检测到遗漏任务，重新执行\n"
+                self.finish += "检测到遗漏任务，重新执行\n\n"
             self.post_data()
         logger.error("已尝试至最大次数，可能打卡失败")
-        self.finish += "已尝试至最大次数，可能打卡失败\n"
+        self.finish += "已尝试至最大次数，可能打卡失败\n\n"
 
 
     def post_data(self):
-        self.finish+= '结果：\n'
+        self.finish+= '结果：\n\n'
         for iter in range(len(self.taskidlist)):
             taskid = self.taskidlist[iter]
             title = self.titlelist[iter]
@@ -162,21 +162,21 @@ class yiban:
                 c = self.sess.post(url2, headers=self.headers, cookies=self.cookie, data=noon_data).text
             else:
                 logger.error(title + '晨检午检判断出错')
-                self.send(title + '晨检午检判断出错')
+                self.send('%s打卡失败'%self.name,'%s晨检午检判断出错'%title)
                 continue
             c = json.loads(c)
             if c['data'] != '':
-                self.finish += '%s打卡成功,' % title
+                self.finish += '%s打卡成功\n\n' % title
                 logger.info('%s打卡成功' % title)
             else:
-                self.finish += '%s打卡失败,'% title
+                self.finish += '%s打卡失败\n\n'% title
                 logger.error('%s打卡失败' % title)
             time.sleep(5)
 
     def start(self):
         if not self.login():
-            logger.error('登录失败')
-            self.send('登录失败')
+            logger.error(self.account+':'+'登录失败')
+            self.send(self.account+':'+'登录失败')
             logger.info("运行结束")
             exit()
         self.auth()
@@ -187,8 +187,8 @@ class yiban:
 
     def start_night_attendance(self):
         if not self.login():
-            logger.error('登录失败')
-            self.send('登录失败')
+            logger.error(self.account+':'+'登录失败')
+            self.send(self.account+':'+'登录失败')
             logger.info("运行结束")
             exit()
         self.auth()
@@ -199,13 +199,13 @@ class yiban:
             if res['data']['State']!=0:
                 if res['data']['State']==3:
                     if i==0:
-                        self.send('%s晚检打卡结果'%self.name,'之前已完成晚点签到')
+                        self.send('%s晚检打卡失败'%self.name,'之前已完成晚点签到')
                         logger.info("之前已完成晚点签到")
                     else:
-                        self.send('%s晚检打卡结果'%self.name,'晚检签到成功')
+                        self.send('%s晚检打卡成功'%self.name,'晚检签到成功')
                         logger.info("晚检签到成功")
                 else:
-                    self.send('晚点签到:%s'%res['data']['Msg'])
+                    self.send('%s晚检打卡失败'%self.name,'晚点签到:%s'%res['data']['Msg'])
                     logger.info('晚点签到:%s'%res['data']['Msg'])
                 logger.info("运行结束")
                 exit()
@@ -219,12 +219,12 @@ class yiban:
             res = json.loads(self.sess.post(post_url, headers=self.headers, cookies=self.cookie,data=data).text)
             if res['code']!=0:
                 logger.error('晚点签到失败，错误：%s'%res['msg'])
-                self.send('%s晚检打卡结果'%self.name,'晚点签到失败，错误：%s'%res['msg'])
+                self.send('%s晚检打卡失败'%self.name,'晚点签到失败，错误：%s'%res['msg'])
                 logger.info("运行结束")
                 exit()
             time.sleep(5)
         logger.error('晚点签到:已尝试至最大次数，可能签到失败')
-        self.send('%s晚检打卡结果'%self.name,'晚点签到:已尝试至最大次数，可能签到失败')
+        self.send('%s晚检打卡失败'%self.name,'晚点签到:已尝试至最大次数，可能签到失败')
         logger.info("运行结束")
 
     def __init__(self,account,pswd,server_url=""):
