@@ -191,15 +191,15 @@ class yiban:
 
 
     def start_night_attendance(self):
+        if not self.login():
+            logger.error(self.account + ':' + '登录失败')
+            self.send(self.account + ':' + '登录失败')
+            logger.info("运行结束")
+            exit()
+        self.auth()
         check_url='https://api.uyiban.com/nightAttendance/student/index/signPosition?CSRF=%s'%self.csrf
         post_url = 'https://api.uyiban.com/nightAttendance/student/index/signIn?CSRF=%s' % self.csrf
         for i in range(self.max_try_time):
-            if not self.login():
-                logger.error(self.account + ':' + '登录失败')
-                self.send(self.account + ':' + '登录失败')
-                logger.info("运行结束")
-                exit()
-            self.auth()
             try:
                 res=json.loads(self.sess.get(check_url, headers=self.headers, cookies=self.cookie).text)
                 state = res['data']['State']
@@ -211,6 +211,12 @@ class yiban:
                     exit()
                 logger.error('晚检任务解析失败，即将重试')
                 time.sleep(10)
+                if not self.login():
+                    logger.error(self.account + ':' + '登录失败')
+                    self.send(self.account + ':' + '登录失败')
+                    logger.info("运行结束")
+                    exit()
+                self.auth()
                 continue
             if state!=0:
                 if state==3:
