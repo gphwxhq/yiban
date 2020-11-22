@@ -96,13 +96,18 @@ class yiban:
                 a = json.loads(self.sess.get(url, headers=self.headers, cookies=self.cookie).text)  # 获取任务列表
             except JSONDecodeError:
                 logger.error('任务列表解析失败，即将重试..')
-                time.sleep(3)
-                a = json.loads(self.sess.get(url, headers=self.headers, cookies=self.cookie).text)
+                time.sleep(10)
+                if not self.login():
+                    self.finish = '登录失败\n\n'
+                    logger.error(self.account + ':' + '登录失败')
+                    logger.info("运行结束")
+                    return
+                self.auth()
+                continue
             if a['code'] != 0:
                 logger.error(a['msg'])
-                self.send("%s打卡失败"%self.name,a['msg'])
-                logger.info("运行结束")
-                exit()
+                time.sleep(5)
+                continue
             data = a['data']
             if len(data) == 0:
                 if i==0:
@@ -186,29 +191,41 @@ class yiban:
 
 
     def start_night_attendance(self):
-        if not self.login():
-            logger.error(self.account+':'+'登录失败')
-            self.send(self.account+':'+'登录失败')
-            logger.info("运行结束")
-            exit()
-        self.auth()
         check_url='https://api.uyiban.com/nightAttendance/student/index/signPosition?CSRF=%s'%self.csrf
         post_url = 'https://api.uyiban.com/nightAttendance/student/index/signIn?CSRF=%s' % self.csrf
         for i in range(self.max_try_time):
-            res=json.loads(self.sess.get(check_url, headers=self.headers, cookies=self.cookie).text)
-            if res['data']['State']!=0:
-                if res['data']['State']==3:
+            if not self.login():
+                logger.error(self.account + ':' + '登录失败')
+                self.send(self.account + ':' + '登录失败')
+                logger.info("运行结束")
+                exit()
+            self.auth()
+            try:
+                res=json.loads(self.sess.get(check_url, headers=self.headers, cookies=self.cookie).text)
+                state = res['data']['State']
+            except TypeError:
+                if i == self.max_try_time-1:
+                    self.send('%s晚检打卡失败' % self.name, '晚检任务解析失败')
+                    logger.error("晚检任务解析失败")
+                    logger.info("运行结束")
+                    exit()
+                logger.error('晚检任务解析失败，即将重试')
+                time.sleep(10)
+                continue
+            if state!=0:
+                if state==3:
                     if i==0:
                         self.send('%s晚检打卡失败'%self.name,'之前已完成晚点签到')
                         logger.info("之前已完成晚点签到")
                     else:
                         self.send('%s晚检打卡成功'%self.name,'晚检签到成功')
                         logger.info("晚检签到成功")
+                    logger.info("运行结束")
+                    exit()
                 else:
-                    self.send('%s晚检打卡失败'%self.name,'晚点签到:%s'%res['data']['Msg'])
                     logger.info('晚点签到:%s'%res['data']['Msg'])
-                logger.info("运行结束")
-                exit()
+                    time.sleep(5)
+                    continue
             add1 = round(random.uniform(111.6987, 111.7011), 4)
             add2=round(random.uniform(40.8140, 40.8159), 4)
             data={
@@ -219,9 +236,6 @@ class yiban:
             res = json.loads(self.sess.post(post_url, headers=self.headers, cookies=self.cookie,data=data).text)
             if res['code']!=0:
                 logger.error('晚点签到失败，错误：%s'%res['msg'])
-                self.send('%s晚检打卡失败'%self.name,'晚点签到失败，错误：%s'%res['msg'])
-                logger.info("运行结束")
-                exit()
             time.sleep(5)
         logger.error('晚点签到:已尝试至最大次数，可能签到失败')
         self.send('%s晚检打卡失败'%self.name,'晚点签到:已尝试至最大次数，可能签到失败')
