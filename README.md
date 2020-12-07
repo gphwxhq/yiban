@@ -11,7 +11,7 @@
 感谢looyeagee大佬提供思路，参考项目：https://github.com/looyeagee/yiban_auto_submit
 # 使用方法：  
 1、下载所需库(requests,pycrypto)  
-2、填写start.py和start_night.py中的内容  
+2、填写start.py和start_night.py中的内容,在work.py中设置模式  
 3、运行start.py执行早中打卡，运行star_night.py执行晚签到
 
 # 服务器部署：

@@ -148,27 +148,39 @@ class yiban:
             title = self.titlelist[iter]
             url = 'https://api.uyiban.com/officeTask/client/index/detail?TaskId=%s&CSRF=%s' % (taskid, self.csrf)
             b = json.loads(self.sess.get(url, headers=self.headers, cookies=self.cookie).text)  # 获取参数
-            # 表单数据：体温，本人是否有可疑症状，同住人是否有可疑症状
-            temper = round(random.uniform(36, 36.6), 1)  # 生成区间位于36-36.6带有一位小数的体温
-            morning_data = {
-                'data': '{"ed9ff15f7155ed96682309ea8f865c94":"%s°","adbd34269e63dab3ceda0a9debb57733":"无以上症状","8525b81624577db90dd509b4301d1d21":"无以上症状"}' % temper,
-                'extend': '{"TaskId":"%s","title":"任务信息","content":[{"label":"任务名称","value":"%s"},{"label":"发布机构","value":"学生工作处"}]}' % (
-                taskid, title)
-            }
-            noon_data = {
-                'data': '{"ed9ff15f7155ed96682309ea8f865c94":"%s°","adbd34269e63dab3ceda0a9debb57733":"无以上症状","9a9c2732741377699aa2158cb58e54f2":"无以上症状"}' % temper,
-                'extend': '{"TaskId":"%s","title":"任务信息","content":[{"label":"任务名称","value":"%s"},{"label":"发布机构","value":"学生工作处"}]}' % (
-                taskid, title)
-            }
             url2 = 'https://api.uyiban.com/workFlow/c/my/apply/%s?CSRF=%s' % (b['data']['WFId'], self.csrf)
-            if title[-4:-2] == "晨检":
-                c = self.sess.post(url2, headers=self.headers, cookies=self.cookie, data=morning_data).text
-            elif title[-4:-2] == "午检":
-                c = self.sess.post(url2, headers=self.headers, cookies=self.cookie, data=noon_data).text
-            else:
-                logger.error(title + '晨检午检判断出错')
-                self.send('%s打卡失败'%self.name,'%s晨检午检判断出错'%title)
-                continue
+
+            temper = round(random.uniform(36, 36.6), 1)  # 生成区间位于36-36.6带有一位小数的体温
+            if self.mode==0:#在校模式
+                # 表单数据：体温，本人是否有可疑症状，同住人是否有可疑症状
+                morning_data = {
+                    'data': '{"ed9ff15f7155ed96682309ea8f865c94":"%s°","adbd34269e63dab3ceda0a9debb57733":"无以上症状","8525b81624577db90dd509b4301d1d21":"无以上症状"}' % temper,
+                    'extend': '{"TaskId":"%s","title":"任务信息","content":[{"label":"任务名称","value":"%s"},{"label":"发布机构","value":"学生工作处"}]}' % (
+                    taskid, title)
+                }
+                noon_data = {
+                    'data': '{"ed9ff15f7155ed96682309ea8f865c94":"%s°","adbd34269e63dab3ceda0a9debb57733":"无以上症状","9a9c2732741377699aa2158cb58e54f2":"无以上症状"}' % temper,
+                    'extend': '{"TaskId":"%s","title":"任务信息","content":[{"label":"任务名称","value":"%s"},{"label":"发布机构","value":"学生工作处"}]}' % (
+                    taskid, title)
+                }
+                if title[-4:-2] == "晨检":
+                    c = self.sess.post(url2, headers=self.headers, cookies=self.cookie, data=morning_data).text
+                elif title[-4:-2] == "午检":
+                    c = self.sess.post(url2, headers=self.headers, cookies=self.cookie, data=noon_data).text
+                else:
+                    logger.error(title + '晨检午检判断出错')
+                    self.send('%s打卡失败' % self.name, '%s晨检午检判断出错' % title)
+                    continue
+            else:#假期模式
+                if title[-1]!='检':
+                    logger.error('表单已更新')
+                    self.send('%s打卡失败' % self.name, '表单已更新')
+                    continue
+                data = {
+                    'data':'{"41c9b2c46fb085f0383d8590e0cfdd16":"%s°","35812c1e3bdc85acf0fa14b8843283ee":["是"],"3bc2d8a7a0b8901b972a049b8243b3c9":["是"],"53910c5a3ffa064348c5999a59f6601d":["内蒙古自治区","呼和浩特市","赛罕区"],"e0eba666f0f4da37f074981fbef89824":"无","5dc465cf3d3366a5578ae8b5ef06e7ca":"无"}'%temper,
+                    'extend':'{"TaskId":"%s","title":"任务信息","content":[{"label":"任务名称","value":"%s"},{"label":"发布机构","value":"%s"},{"label":"发布人","value":"%s"}]}'%(taskid, title,b['data']['PubOrgName'],b['data']['PubPersonName'])
+                }
+                c = self.sess.post(url2, headers=self.headers, cookies=self.cookie, data=data).text
             c = json.loads(c)
             if c['data'] != '':
                 self.finish += '%s打卡成功\n\n' % title
@@ -251,7 +263,7 @@ class yiban:
         self.sess = requests.session()
         self.account = account
         self.passwd = pswd
-        self.csrf = 'a6c72b556f582b4cc1a557cf80ca7cc7'
+        self.csrf =''.join(random.sample('zyxwvutsrqponmlkjihgfedcba0123456789',32))
         self.cookie={'csrf_token':self.csrf}
         self.headers = {
             'origin': 'https://app.uyiban.com',
@@ -262,3 +274,4 @@ class yiban:
         self.max_try_time=3
         self.server_url=server_url
         self.finish=""
+        self.mode=1#0为在校模式，1为假期模式
