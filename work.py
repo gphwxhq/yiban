@@ -160,12 +160,11 @@ class yiban:
                 }
                 noon_data = {
                     'data': '{"ed9ff15f7155ed96682309ea8f865c94":"%s°","adbd34269e63dab3ceda0a9debb57733":"无以上症状","9a9c2732741377699aa2158cb58e54f2":"无以上症状"}' % temper,
-                    'extend': '{"TaskId":"%s","title":"任务信息","content":[{"label":"任务名称","value":"%s"},{"label":"发布机构","value":"学生工作处"}]}' % (
-                    taskid, title)
+                    'extend':'{"TaskId":"%s","title":"任务信息","content":[{"label":"任务名称","value":"%s"},{"label":"发布机构","value":"%s"},{"label":"发布人","value":"%s"}]}'%(taskid, title,b['data']['PubOrgName'],b['data']['PubPersonName'])
                 }
-                if title[-4:-2] == "晨检":
+                if title[-2:] == "晨检":
                     c = self.sess.post(url2, headers=self.headers, cookies=self.cookie, data=morning_data).text
-                elif title[-4:-2] == "午检":
+                elif title[-2:] == "午检":
                     c = self.sess.post(url2, headers=self.headers, cookies=self.cookie, data=noon_data).text
                 else:
                     logger.error(title + '晨检午检判断出错')
