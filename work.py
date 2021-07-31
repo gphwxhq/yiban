@@ -53,7 +53,7 @@ class yiban:
         }
         HEADERS = {"Origin": "https://c.uyiban.com", "User-Agent": "yiban"}
         try:
-            data = self.sess.get("https://mobile.yiban.cn/api/v2/passport/login", params=params, headers=HEADERS).text
+            data = self.sess.get("https://mobile02.yiban.cn/api/v2/passport/login", params=params, headers=HEADERS).text
         except SSLError:
             #解决 (Caused by SSLError(SSLError(1, '[SSL: DH_KEY_TOO_SMALL] dh key too small (_ssl.c:897)'),))
             requests.packages.urllib3.disable_warnings()
@@ -76,17 +76,24 @@ class yiban:
 
     def auth(self):
         #登录验证
-        HEADERS = {"Origin": "https://c.uyiban.com", "User-Agent": "yiban"}
-        location = self.sess.get('http://f.yiban.cn/iapp/index?act=iapp7463&v=%s' % self.access_token, headers=HEADERS,
-                                 allow_redirects=False).headers["Location"]
-        verifyRequest = re.findall(r"verify_request=(.*?)&", location)[0]
+        HEADERS = {"logintoken":self.access_token,"Host": "f.yiban.cn", "User-Agent": "yiban"}
+        # location = self.sess.get('http://f.yiban.cn/iapp/index?act=iapp7463&v=%s' % self.access_token, headers=HEADERS,
+        #                          allow_redirects=False)
+        au=self.sess.get('https://f.yiban.cn/iapp7463?access_token=%s&v_time=%s'%(self.access_token,round(time.time())), headers=HEADERS,allow_redirects=False)
+        location = self.sess.get('http://f.yiban.cn/iapp/index?act=iapp7463', headers=HEADERS,
+                                 allow_redirects=False)
+        if "Location" in location.headers.keys():
+            location=location.headers["Location"]
+            verifyRequest = re.findall(r"verify_request=(.*?)&", location)[0]
+        else:
+            verifyRequest=''
         # logger.info(verifyRequest)
-        self.sess.get("https://api.uyiban.com/base/c/auth/yiban?verifyRequest=%s&CSRF=%s" % (verifyRequest, self.csrf),
+        t=self.sess.get("https://api.uyiban.com/base/c/auth/yiban?verifyRequest=%s&CSRF=%s" % (verifyRequest, self.csrf),
                       cookies=self.cookie, headers=self.headers)
 
     def get_tasklist(self):
         cur = time.time()
-        starttime = time.strftime("%Y-%m-%d", time.localtime(cur - 604800))  # 往前推7天
+        starttime = time.strftime("%Y-%m-%d", time.localtime(cur - 86400*7))  # 往前推7天
         # starttime 形式='2020-10-01'
         endtime = time.strftime("%Y-%m-%d", time.localtime(cur + 86400))  # 往后推一天，解决服务器时区问题
         url = 'https://api.uyiban.com/officeTask/client/index/uncompletedList?StartTime={}%2000%3A00&EndTime={}%2023%3A59&CSRF={}'.format(
@@ -176,17 +183,17 @@ class yiban:
                     self.send('%s打卡失败' % self.name, '表单已更新')
                     continue
                 data = {
-                    'data':'{"41c9b2c46fb085f0383d8590e0cfdd16":"%s°","35812c1e3bdc85acf0fa14b8843283ee":["是"],"3bc2d8a7a0b8901b972a049b8243b3c9":["是"],"53910c5a3ffa064348c5999a59f6601d":[%s],"e0eba666f0f4da37f074981fbef89824":"无","5dc465cf3d3366a5578ae8b5ef06e7ca":"无"}'%(temper,self.address),
+                    'data':'{"41c9b2c46fb085f0383d8590e0cfdd16":"%s°","35812c1e3bdc85acf0fa14b8843283ee":["是"],"3bc2d8a7a0b8901b972a049b8243b3c9":["是"],"53910c5a3ffa064348c5999a59f6601d":[%s]}'%(temper,self.address),
                     'extend':'{"TaskId":"%s","title":"任务信息","content":[{"label":"任务名称","value":"%s"},{"label":"发布机构","value":"%s"},{"label":"发布人","value":"%s"}]}'%(taskid, title,b['data']['PubOrgName'],b['data']['PubPersonName'])
                 }
                 c = self.sess.post(url2, headers=self.headers, cookies=self.cookie, data=data).text
             c = json.loads(c)
-            if c['data'] != '':
+            if c['msg'] == '':
                 self.finish += '%s打卡成功\n\n' % title
                 logger.info('%s打卡成功' % title)
             else:
-                self.finish += '%s打卡失败\n\n'% title
-                logger.error('%s打卡失败' % title)
+                self.finish += '%s打卡失败,%s\n\n'% (title,c['msg'])
+                logger.error('%s打卡失败,%s'% (title,c['msg']))
             time.sleep(5)
 
     def start(self):
