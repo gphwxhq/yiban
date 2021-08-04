@@ -162,8 +162,7 @@ class yiban:
                 # 表单数据：体温，本人是否有可疑症状，同住人是否有可疑症状
                 morning_data = {
                     'data': '{"ed9ff15f7155ed96682309ea8f865c94":"%s°","adbd34269e63dab3ceda0a9debb57733":"无以上症状","8525b81624577db90dd509b4301d1d21":"无以上症状"}' % temper,
-                    'extend': '{"TaskId":"%s","title":"任务信息","content":[{"label":"任务名称","value":"%s"},{"label":"发布机构","value":"学生工作处"}]}' % (
-                    taskid, title)
+                    'extend': '{"TaskId":"%s","title":"任务信息","content":[{"label":"任务名称","value":"%s"},{"label":"发布机构","value":"%s"},{"label":"发布人","value":"%s"}]}'%(taskid, title,b['data']['PubOrgName'],b['data']['PubPersonName'])
                 }
                 noon_data = {
                     'data': '{"ed9ff15f7155ed96682309ea8f865c94":"%s°","adbd34269e63dab3ceda0a9debb57733":"无以上症状","9a9c2732741377699aa2158cb58e54f2":"无以上症状"}' % temper,
