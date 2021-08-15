@@ -159,7 +159,7 @@ class yiban:
             detail = self.sess.get(detail_url, headers=self.headers, cookies=self.cookie).json()
             if not self.switchForm(detail['data']['Form']):
                 logger.error(title + '不在表单库中')
-                self.send('%s打卡失败' % self.name, '%s不在表单库中' % title)
+                self.finish+='%s不在表单库中\n\n' % title
                 continue
             url2 = 'https://api.uyiban.com/workFlow/c/my/apply/%s?CSRF=%s' % (param['data']['WFId'], self.csrf)
             data = {
@@ -202,9 +202,11 @@ class yiban:
             if state == 3:
                 self.send('%s晚检打卡完成' % self.name, '之前已完成晚点签到')
                 logger.info("之前已完成晚点签到")
+                logger.info("运行结束")
             else:
                 logger.info('晚点签到:%s' % res['data']['Msg'])
                 self.send('%s晚检打卡失败' % self.name, res['data']['Msg'])
+                logger.info("运行结束")
             return
         if params['path']=='':
             data = {
@@ -219,6 +221,7 @@ class yiban:
             except FileNotFoundError:
                 logger.error('晚点签到失败，未找到照片')
                 self.send('%s晚检签到失败' % self.name,'未找到照片')
+                logger.info("运行结束")
                 return
             upload = self.sess.get(
                 'https://api.uyiban.com/nightAttendance/student/index/uploadUri?name=yiban_camera1.jpg&type=image%2Fjpeg&size=' + str(
@@ -251,6 +254,7 @@ class yiban:
         else:
             self.send('%s晚检打卡成功' % self.name, '晚检签到成功')
             logger.info("晚检签到成功")
+        logger.info("运行结束")
 
     def __init__(self, account, pswd, server_url=""):
         self.sess = requests.session()
