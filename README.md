@@ -12,6 +12,9 @@
 2、填写start.py,start_night.py中的内容，按需修改list.json中的表单
 3、运行start.py执行早中打卡，运行star_night.py执行晚签到
 
+# list.json
+采用json格式保存表单，除了体温均可写死，体温如不加'°'则留空，加'°'则填'°'，表单中如出现额外的'体温'两字，请修改switchForm函数的判断逻辑
+
 # 经纬度获取方法
 [高德api](https://lbs.amap.com/tools/picker)
 
