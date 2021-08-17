@@ -83,7 +83,7 @@ class yiban:
             t = f.read()
             oform = json.loads(t)
         self.postForm = {}
-        label = [item['props']['label'] for item in data]
+        label = [item['props']['label'] for item in data if 'label' in item['props'].keys()]
         for form in oform:
             if label == list(oform[form].keys()):
                 for item in data:
