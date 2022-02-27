@@ -1,8 +1,8 @@
 # coding=utf-8
-from utils import yiban
+from Utils import Yiban
 
 if __name__ == '__main__':
-    yb = yiban('',  # 账号
+    yb = Yiban('',  # 账号
                '',  # 密码
                '',# server酱url，没有不填
                )
