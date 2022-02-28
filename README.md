@@ -12,7 +12,7 @@
 * 首次运行或表单更新：  
 1、下载所需库(requests,pycrypto)  
 2、填写extracter.py内容，运行以获取打卡模板  
-3、修改list.json中的表单，不要删去"[]"或"°"  
+3、修改list.json中的表单，不要删去"[]"或"°"，不用填体温
 4、填写start.py或start_night.py中的内容  
 5、运行start.py执行早中打卡，运行star_night.py执行晚签到
 
