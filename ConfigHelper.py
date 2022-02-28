@@ -1,6 +1,6 @@
 import json
 
-__fileName= "list_.json"
+__fileName= "list.json"
 
 def configWriter(form):
     with open(__fileName, "w", encoding='utf-8') as f:

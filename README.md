@@ -8,12 +8,16 @@
 * 完成晚签到
 * server酱推送结果
 
-# 使用方法：  
+# 使用方法： 
+* 首次运行或表单更新：  
 1、下载所需库(requests,pycrypto)  
 2、填写extracter.py内容，运行以获取打卡模板  
 3、修改list.json中的表单，不要删去"[]"或"°"  
 4、填写start.py或start_night.py中的内容  
 5、运行start.py执行早中打卡，运行star_night.py执行晚签到
+
+* 非首次运行：  
+运行start.py执行早中打卡，运行star_night.py执行晚签到  
 
 # 文件作用
 ConfigHelper.py: 读写list.json  
@@ -29,7 +33,7 @@ yiban.log: 日志文件
 
 # 自定义
 如需更换list.json文件名，请在ConfigHelper.py中修改  
-日志存放位置可在logger.py中的LOG_PATH修改
+日志存放位置可在logger.py中的LOG_PATH修改  
 默认打卡时间范围为一星期，可在Utils.py更改starttime和endtime修改，最长不超过一个月  
 
 # 关于list.json
